@@ -40,7 +40,7 @@ add_compile_options(-ffunction-sections -fdata-sections -fno-common -fmessage-le
 add_compile_options($<$<COMPILE_LANGUAGE:ASM>:-x$<SEMICOLON>assembler-with-cpp>)
 
 #设置编译器优化等级
-set(Build_str MinSizeRel)
+set(Build_str g)
 
 if ("${Build_str}" STREQUAL "Release")
     message(STATUS "Maximum optimization for speed")
@@ -66,7 +66,8 @@ include_directories(
         User
         board_dev
         ##printf
-        third_party/printf
+        Tools/printf
+        Tools/lwrb
 )
 
 
@@ -79,8 +80,8 @@ file(GLOB_RECURSE SOURCES
         CMSIS/startup_stm32f401xx.s
         board_dev/*.*
         ##printf
-        third_party/printf/printf.c
-
+        Tools/printf/printf.c
+        Tools/lwrb/lwrb.c
         )
 
 #排除stm32F401不支持的fsmc 和fmc

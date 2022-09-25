@@ -9,15 +9,28 @@
  * 本文件暂时提供了基于UART1 (PA9-PA10)的串口通信功能，后面会替换为ESP8266的通信
  */
 
+
+
+char  Usart1ReadBuff[Usart1ReadLen]={0};  //接收数据临时缓存
+u32 Usart1ReadCnt = 0;//串口1接收到的数据个数
+u32 Usart1ReadCntCopy = 0;//串口1接收到的数据个数
+u32 Usart1IdleCnt = 0;//空闲检测用
+u8  Usart1ReadFlage=0;//串口1接收到一条完整数据
+
+u8  UpdateStartFlage = 0;
+
+//更新程序使用
+u8  UpdateUsart1Buff[UpdateUsart1ReadLen]={0};  //接收数据缓存
+u8  UpdateOverflow = 0;//是不是溢出
+
 /**
  * printf_ 需要实现的底层函数
  * @param character
  */
 void _putchar(char character) {
-    USART_ClearITPendingBit(USART1,USART_IT_TC);//解决printf丢失第一个字节的问题
+    USART_ClearITPendingBit(USART1, USART_IT_TC);//解决printf丢失第一个字节的问题
     USART_SendData(USART1, (uint8_t) character);
     while (USART_GetFlagStatus(USART1, USART_FLAG_TC) == RESET) {}
-
 }
 
 /**
@@ -58,10 +71,10 @@ void uart1_init(u32 bound) {
     NVIC_InitTypeDef NVIC_InitStructure;
     /*串口--1*/
     NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority=2;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
     NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStructure);	//根据指定的参数初始化VIC寄存器
+    NVIC_Init(&NVIC_InitStructure);    //根据指定的参数初始化VIC寄存器
 }
 
 
@@ -70,8 +83,8 @@ void USART1_IRQHandler(void)                    //串口1中断服务程序
     u8 Res;
     if (USART_GetITStatus(USART1, USART_IT_RXNE) != RESET) {
         Res = USART_ReceiveData(USART1);    //读取接收到的数据
-        printf("%c",Res);
-/*
+
+        //如果Usart1ReadBuff 还有空间，则把接收到的数据丢进去
         if(Usart1ReadCnt < Usart1ReadLen-1)
         {
             Usart1ReadBuff[Usart1ReadCnt] = Res;
@@ -83,12 +96,12 @@ void USART1_IRQHandler(void)                    //串口1中断服务程序
         Usart1ReadCnt ++;	//数据个数
         Usart1IdleCnt = 0;
 
-        if(UpdataStartFlage)//如果置位升级标志
-        {
-            if(PutData(&pRb,&Res,1) == -1)//写入环形队列
-            {
-                UpdateOverflow = 1;//环形队列溢出
-            }
-        }*/
+//        if(UpdataStartFlage)//如果置位升级标志
+//        {
+//            if(PutData(&pRb,&Res,1) == -1)//写入环形队列
+//            {
+//                UpdateOverflow = 1;//环形队列溢出
+//            }
+//        }
     }
 }

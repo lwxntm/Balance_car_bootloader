@@ -22,9 +22,10 @@
 #include "main.h"
 #include "printf.h"
 #include "uart1.h"
+#include "stm_flash.h"
 /** @addtogroup Template_Project
   * @{
-  */ 
+  */
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -38,45 +39,52 @@ static void Delay(__IO uint32_t nTime);
 
 /* Private functions ---------------------------------------------------------*/
 
-/**
-  * @brief  Main program
-  * @param  None
-  * @retval None
-  */
-int main(void)
-{
-    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);	//设置NVIC中断分组2:2位抢占优先级，2位响应优先级
-  GPIO_InitTypeDef GPIO_InitStructure;
- 
- /*!< At this stage the microcontroller clock setting is already configured, 
-       this is done through SystemInit() function which is called from startup
-       files before to branch to application main.
-       To reconfigure the default setting of SystemInit() function, 
-       refer to system_stm32f4xx.c file */
+#include "lwrb.h"
 
-  /* SysTick end of count event each 10ms */
-  RCC_GetClocksFreq(&RCC_Clocks);
-  SysTick_Config(RCC_Clocks.HCLK_Frequency / 100);
-  
-  /* Add your application code here */
-  /* Insert 50 ms delay */
-  Delay(5);
-  
-  /* Output HSE clock on MCO1 pin(PA8) ****************************************/ 
-  /* Enable the GPIOA peripheral */ 
-  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
-  
+lwrb_t lwrbuffer;
+uint8_t *buffdata[128];
 
-    uart1_init(115200);
-    while (1){
-      //  printf("Hello, stm32F401_bootloader\n");
+int main(void) {
+    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);    //设置NVIC中断分组2:2位抢占优先级，2位响应优先级
+    GPIO_InitTypeDef GPIO_InitStructure;
+    lwrb_init(&lwrbuffer, buffdata, 128);
+    lwrb_get_free(&lwrbuffer);
+    /*!< At this stage the microcontroller clock setting is already configured,
+          this is done through SystemInit() function which is called from startup
+          files before to branch to application main.
+          To reconfigure the default setting of SystemInit() function,
+          refer to system_stm32f4xx.c file */
+
+    /* SysTick end of count event each 10ms */
+    RCC_GetClocksFreq(&RCC_Clocks);
+    SysTick_Config(RCC_Clocks.HCLK_Frequency / 100);
+
+    /* Add your application code here */
+    /* Insert 50 ms delay */
+    Delay(5);
+
+    /* Output HSE clock on MCO1 pin(PA8) ****************************************/
+    /* Enable the GPIOA peripheral */
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+    uart1_init(9600);
+    uint16_t update_flag = 0xde;
+    printf_("update_flag_read test\n");
+    //把update_flag写入到flash里
+    mflash_write(FLASH_UPDATE_FLAGE_ADDR, &update_flag, 1);
+    //再读出来
+    uint16_t update_flag_readed = read_flash_16bit(FLASH_UPDATE_FLAGE_ADDR);
+    printf_("update_flag_readed is 0x%X\n", update_flag_readed);
+    while (1);
+    extern int flash_test(void);
+    flash_test();
+    while (1) {
+        //  printf("Hello, stm32F401_bootloader\n");
         Delay(1000);
     }
 
 
-  while (1)
-  {
-  }
+    while (1) {
+    }
 }
 
 /**
@@ -84,12 +92,11 @@ int main(void)
   * @param  nTime: specifies the delay time length, in milliseconds.
   * @retval None
   */
-void Delay(__IO uint32_t nTime)
-{ 
-  uwTimingDelay = nTime/10;
-    if (uwTimingDelay<1)
+void Delay(__IO uint32_t nTime) {
+    uwTimingDelay = nTime / 10;
+    if (uwTimingDelay < 1)
         uwTimingDelay++;
-  while(uwTimingDelay != 0);
+    while (uwTimingDelay != 0);
 }
 
 /**
@@ -97,12 +104,10 @@ void Delay(__IO uint32_t nTime)
   * @param  None
   * @retval None
   */
-void TimingDelay_Decrement(void)
-{
-  if (uwTimingDelay != 0x00)
-  { 
-    uwTimingDelay--;
-  }
+void TimingDelay_Decrement(void) {
+    if (uwTimingDelay != 0x00) {
+        uwTimingDelay--;
+    }
 }
 
 #ifdef  USE_FULL_ASSERT

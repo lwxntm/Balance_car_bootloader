@@ -159,15 +159,26 @@ int32_t check_flash_sector_is_need_erase(uint32_t Address) {
 
 
 /**
- * 从指定地址开始写入指定长度的数据，如果即将写数据的区域有数据，会先擦除所在的扇区
- * @param WriteAddr 要写入的flash地址
- * @param pBuffer 要写入的buffer，应该为uint16_t 的数组
- * @param halfWords_to_write 要写入的uint16_t 数据的个数
+ * 从指定地址开始写入指定长度的数据，如果即将写数据的区域有数据，会先擦除所在的扇区。
+ * 所以请勿直接对同一个地址写入两次，会导致其所在的扇区被擦除
+ * @param WriteAddr 要写入的flash地址(eg. 0x08060000)
+ * @param pBuffer 要写入的uint16_t 的数组
+ * @param halfWords_to_write uint16_t数据的个数
+ * @return SUCCESS为写入成功， ERROR 为写入过程发生错误
  */
-void mflash_write(const u32 WriteAddr, u16 *const pBuffer, const u16 halfWords_to_write) {
+ErrorStatus mflash_write(const u32 WriteAddr, u16 *const pBuffer, const uint32_t halfWords_to_write) {
+    /**
+     * 本函数的思路：
+     * 首先检查参数是否合法
+     * 然后解锁flash
+     * 判断即将写入的flash范围内的数据是否都是0xffff，如果不是则需要擦除后再写入
+     * 然后按16bit把buffer里的数据全部写入到flash里面去
+     * 上锁后读取写入的数据，与buffer做对比
+     */
     //检查地址是否合法
-    if (WriteAddr < STM32_FLASH_BASE || (WriteAddr >= (STM32_FLASH_BASE + 1024 * STM32_FLASH_SIZE)))return;//非法地址
-
+    if (WriteAddr < STM32_FLASH_BASE || (WriteAddr >= (STM32_FLASH_BASE + 1024 * STM32_FLASH_SIZE)))return ERROR;//非法地址
+    if (halfWords_to_write < 1) //数量非法
+        return ERROR;
     FLASH_Unlock();                        //解锁
     int32_t need_erase_flag = check_flash_range_is_need_erase(WriteAddr, WriteAddr + 2 * halfWords_to_write);
     if (need_erase_flag)//需要擦除
@@ -238,10 +249,12 @@ void mflash_write(const u32 WriteAddr, u16 *const pBuffer, const u16 halfWords_t
         /* KO */
         /* Turn on LD2 */
         printf_("FLASH_Program failed!\n");
+        return ERROR;
     } else {
         /* OK */
         /* Turn on LD1 */
         printf_("FLASH_Program  finished!\n");
+        return SUCCESS;
     }
 
 
@@ -290,5 +303,31 @@ void STMFLASH_Read(u32 ReadAddr, u16 *pBuffer, u16 NumToRead) {
     for (i = 0; i < NumToRead; i++) {
         pBuffer[i] = read_flash_16bit(ReadAddr);//读取2个字节.
         ReadAddr += 2;//偏移2个字节.
+    }
+}
+
+
+/**
+ * 写入是否要升级的flag
+ * @param update_enable 1表示要升级，0表示不升级
+ */
+void update_flag_set(uint8_t update_enable) {
+
+    uint16_t update_flag = update_enable ? 1 : 0;
+    //把update_flag写入到flash里
+    mflash_write(FLASH_UPDATE_FLAGE_ADDR, &update_flag, 1);
+}
+
+
+/**
+ * 检查是否需要升级
+ * @return  1是需要升级，0是不需要升级
+ */
+uint8_t update_flag_get() {
+    uint16_t update_flag_readed = read_flash_16bit(FLASH_UPDATE_FLAGE_ADDR);
+    if (update_flag_readed == (uint16_t) 1) {
+        return 1;
+    } else {
+        return 0;
     }
 }

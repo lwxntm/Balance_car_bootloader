@@ -32,7 +32,7 @@ Sector 7 0x0806 0000 - 0x0807 FFFF 128 Kbytes     --
 #define ADDR_FLASH_SECTOR_6     ((uint32_t)0x08040000) /* Base address of Sector 6, 128 Kbytes  */
 #define ADDR_FLASH_SECTOR_7     ((uint32_t)0x08060000) /* Base address of Sector 7, 128 Kbytes  */
 #define ADDR_FLASH_SECTOR_8     ((uint32_t)0x08080000) /* Base address of Sector 8, 128 Kbytes  */
-//下面的扇区在512K flash 的stm32设备上不存在，暂时注释掉
+//下面的扇区在512K flash 的stm32设备上不存在，暂时注释掉，要注意的扇区8其实也不存在，但是他可以作为flash的结束 地址所以保留
 #if 0
 
 #define ADDR_FLASH_SECTOR_9     ((uint32_t)0x080A0000) /* Base address of Sector 9, 128 Kbytes  */
@@ -43,21 +43,17 @@ Sector 7 0x0806 0000 - 0x0807 FFFF 128 Kbytes     --
 
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
-#define FLASH_USER_START_ADDR   ADDR_FLASH_SECTOR_4   /* Start address of user Flash area */
-#define FLASH_USER_END_ADDR     ADDR_FLASH_SECTOR_8  /* End address of user Flash area */
-
-
 
 //用户根据自己的需要设置
-#define STM32_FLASH_SIZE 512 	 		//所选STM32的FLASH容量大小(单位为K)
+#define STM32_FLASH_SIZE 512            //所选STM32的FLASH容量大小(单位为K)
 #define STM32_FLASH_WREN 1        //使能FLASH写入(0，不使能;1，使能)
 #define FLASH_IAP_SIZE (16*3)         //bootloader所用容量大小(KB)
-#define FLASH_DATA_SIZE 16					//存储用户数据所用容量大小(KB)
+#define FLASH_DATA_SIZE 16                    //存储用户数据所用容量大小(KB)
 
 //用户程序大小 = (总FLASH容量 - 存储用户数据所用容量大小(KB) - bootloader所用容量大小(KB))
 #define FLASH_USER_SIZE  (STM32_FLASH_SIZE - FLASH_DATA_SIZE - FLASH_IAP_SIZE)  //用户程序大小(KB)
 
-#define STM32_FLASH_BASE 0x8000000 	//STM32 FLASH的起始地址
+#define STM32_FLASH_BASE 0x8000000    //STM32 FLASH的起始地址
 
 
 //用户程序运行地址:FLASH的起始地址 + bootloader所用程序大小 +DATA 所用大小
@@ -69,11 +65,14 @@ Sector 7 0x0806 0000 - 0x0807 FFFF 128 Kbytes     --
 //把更新标志放到 FLASH_DATA_ADDR
 #define FLASH_UPDATE_FLAGE_ADDR (FLASH_DATA_ADDR) //存储更新标志
 
-void mflash_write(const u32 WriteAddr, u16 *const pBuffer, const u16 halfWords_to_write);		//从指定地址开始写入指定长度的数据
-void STMFLASH_Read(u32 ReadAddr,u16 *pBuffer,u16 NumToRead);   		//从指定地址开始读出指定长度的数据
-char FlashWriteHalfWord(uint32_t WriteAddress,u16 data);
+ErrorStatus mflash_write(u32 WriteAddr, u16 *pBuffer, uint32_t halfWords_to_write);        //从指定地址开始写入指定长度的数据
+void STMFLASH_Read(u32 ReadAddr, u16 *pBuffer, u16 NumToRead);        //从指定地址开始读出指定长度的数据
+char FlashWriteHalfWord(uint32_t WriteAddress, u16 data);
 
 #define read_flash_16bit(flash_addr) (*(__IO uint16_t *)(flash_addr))
 
+uint8_t update_flag_get();
+
+void update_flag_set(uint8_t update_enable);
 
 #endif //F401_BALANCE_CAR_BOOTLOADER_STM_FLASH_H

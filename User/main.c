@@ -66,15 +66,11 @@ int main(void) {
     /* Output HSE clock on MCO1 pin(PA8) ****************************************/
     /* Enable the GPIOA peripheral */
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
-    uart1_init(9600);
-    uint16_t update_flag = 0xde;
-    printf_("update_flag_read test\n");
-    //把update_flag写入到flash里
-    mflash_write(FLASH_UPDATE_FLAGE_ADDR, &update_flag, 1);
-    //再读出来
-    uint16_t update_flag_readed = read_flash_16bit(FLASH_UPDATE_FLAGE_ADDR);
-    printf_("update_flag_readed is 0x%X\n", update_flag_readed);
-    while (1);
+    uart1_init(921600);
+    uint32_t cnt = 0;
+    while (1) {
+        printf_("ascii chars send test %d\n", cnt++);
+    };
     extern int flash_test(void);
     flash_test();
     while (1) {
